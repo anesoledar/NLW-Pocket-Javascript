@@ -1,5 +1,6 @@
 import fastify from 'fastify'
-
+const { config } = require('dotenv')
+config()
 const app = fastify()
 
 app
