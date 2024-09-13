@@ -127,3 +127,95 @@ docker compose up -d
 ```bash
 docker ps
 ```
+## Como configurar o Drizzle ORM no seu projeto
+
+1. Instalação e Configuração
+Instale as dependências:
+```
+npm i drizzle-orm drizzle-kit zod postgres
+```
+* drizzle-orm: Para interagir com o banco de dados.
+* drizzle-kit: Para gerenciar migrações e realizar outras tarefas.
+* zod: Para validação de dados.
+* postgres: Driver para conexão com o PostgreSQL.
+* Crie o arquivo drizzle.config.ts na raiz do projeto:
+import { defineConfig } from 'drizzle-kit'
+import { env } from './src/http/env'
+```
+export default defineConfig({
+  schema: './src/db/schema/index.ts',
+  out: './migrations',
+  dialect: 'postgresql',
+  dbCredentials: {
+    url: env.DATABASE_URL,
+  },
+  verbose: true,
+  strict: true,
+})
+```
+* Crie o arquivo .env na raiz do projeto:
+```
+DATABASE_URL = 'postgresql://docker:docker@localhost:5432/inorbit'
+```
+*Atualize o script dev no package.json:
+```
+"scripts": {
+  "dev": "tsx --env-file .env watch src/http/server.ts"
+},
+```
+* Crie o arquivo env.ts dentro da pasta src para validar o conteúdo do .env:
+ ```
+import z from "zod";
+
+const envSchema = z.object({
+    DATABASE_URL : z.string().url(),
+})
+
+export const env = envSchema.parse(process.env)
+// Caso o arquivo env não esteja no formato correto ele vai gerar um erro e fechar o programa.
+```
+2. Definição do Schema
+* Crie a pasta db dentro da pasta src e o arquivo schema.ts dentro dela:
+```
+import { pgTable, text, integer, timestamp } from 'drizzle-orm/pg-core'
+
+export const goals = pgTable('goals', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  desiredWeeklyFrequency: integer('desired_weekly_frequency').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+```
+3. Gerando Migrações e Criando a Tabela
+* Execute o comando para gerar as migrações:
+  ```
+  npx drizzle-kit generate
+  ```
+* Após a geração das migrações, execute o comando para criar a tabela:
+```
+npx drizzle-kit migrate
+```
+* Para visualizar a tabela criada, execute o comando:
+```
+npx drizzle-kit studio
+```
+* Isso abrirá um link no seu navegador para visualizar a tabela.
+4. Criando a Tabela de Metas Concluídas
+* Adicione a definição da tabela goalCompletions no arquivo schema.ts:
+```
+export const goalCompletions = pgTable('goal_completions', {
+  id: text('id').primaryKey(),
+  // Adicione os campos da tabela aqui...
+})
+
+```
+* Execute novamente os comandos npx drizzle-kit generate e npx drizzle-kit migrate para criar a nova tabela.
+5. Dicas Importantes
+* Utilize o dotenv para carregar as variáveis de ambiente:
+```
+const { config } = require('dotenv')
+config()
+```
+
